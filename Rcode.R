@@ -1,33 +1,20 @@
-# Reproducible Research: Peer Assessment 1
-
-## Loading and preprocessing the data
-```{r, echo=TRUE, cache=TRUE}
 data <- read.csv("./activity.csv", colClasses = c("numeric","Date","numeric"))
-```
- 
-## What is mean total number of steps taken per day?
-### Histogram of mean total number of steps per day
-```{r histogram, echo=TRUE}
+
+# Histogram of mean total number of steps per day
 stepsxday <- aggregate( steps ~ date, data = data, 
                         FUN = "sum", na.action = na.omit )
-steps_mean <- mean(stepsxday$steps)
-steps_median <- median(stepsxday$steps)
-par(ps=16)
 hist(stepsxday$steps, xlab = "Number of Steps", breaks = 10, 
      col="blue", main = "Total number of steps taken each day")
-```
+steps_mean <- mean(stepsxday$steps)
+steps_median <- median(stepsxday$steps)
 
-The mean of the total number of steps taken each day is `r sprintf("%.2f", steps_mean)`, while the median is `r sprintf("%d", steps_median)`.
-
-## What is the average daily activity pattern?
-```{r activity_pattern, echo=TRUE}
+# Average daily activity pattern
 library(lattice)
 nintervals <- 24 * 60 / 5
 ndays <- nrow(data) / nintervals
 stepsxinterval <- aggregate( steps ~ interval, data = data, FUN = "sum" )
 names(stepsxinterval) <- c("interval","mean_steps")
 stepsxinterval$mean_steps <- stepsxinterval$mean_steps / ndays
-max_interval <- stepsxinterval$interval[which.max(stepsxinterval$mean_steps)]
 
 ylabspec <- list(label="Average number of steps", cex=1.5)
 xlabspec <- list(label="Interval", cex=1.5)
@@ -35,18 +22,13 @@ mspec <- list(label="Average Daily Activity Pattern", cex=1.5)
 xyplot(mean_steps ~ interval, data = stepsxinterval, type="l", 
        xlab = xlabspec, ylab = ylabspec, col = "black", 
        main = mspec, scales = list(cex=1.25))
-```
-The 5-minute interval that contains the maximum number of steps is `r max_interval`.
 
-## Imputing missing values
-```{r missing_values, echo=TRUE}
+max_interval <- stepsxinterval$interval[which.max(stepsxinterval$mean_steps)]
+
+# Inputing missing values with mean of 5-minute interval 
 idx <- is.na(data$steps)
 n_missval <- sum(idx)
-```
-The total number of missing values in the data set is `r n_missval`.
 
-In the following piece of code we fill the missing values with the mean steps of each 5-minutes interval.
-```{r filling_na, echo=TRUE}
 data2 <- data
 for (i in 1:length(idx)) {
   if (idx[i] == TRUE) {
@@ -55,31 +37,17 @@ for (i in 1:length(idx)) {
                           which(stepsxinterval$interval == intval)]
   }
 }
-```
-
-Then we extract the data for the histogram with filled missing values
-```{r histogram_na, echo=TRUE}
 stepsxday2 <- aggregate( steps ~ date, data = data2, FUN = "sum")
-steps_mean2 <- mean(stepsxday2$steps)
-steps_median2 <- median(stepsxday2$steps)
-par(ps=16)
 hist(stepsxday2$steps, xlab = "Number of Steps", breaks = 10, 
      col="green", main = "Total number of steps taken each day")
-```
-When we include the missing values the mean of the total number of steps taken each day is `r sprintf("%.2f", steps_mean2)` and the median is `r sprintf("%d", steps_median2)`. As expected, the value of these variables decreases when we fill the missing values with some sort of average due to the increased number of measurements used for their estimation.
+steps_mean2 <- mean(stepsxday2$steps)
+steps_median2 <- median(stepsxday2$steps)
 
-
-## Are there differences in activity patterns between weekdays and weekends?
-First we create the factor variable "weekday" and "weekend".
-```{r factor_var, echo=TRUE}
+# Difference in pattern between weekdays and weekends
 data2 <- cbind(data2, 
                factor(as.numeric(weekdays(data2$date) %in% c("Saturday","Sunday")),
                         labels = c("weekday","weekend")))
 names(data2)[4] <- "daytype"
-```
-
-Then we plot the two different panels of the activity pattern.
-```{r activity_difference, echo=TRUE}
 n_weekdays <- sum(data2$daytype == "weekday") / nintervals
 n_weekends <- sum(data2$daytype == "weekend") / nintervals
 steps_weend <- aggregate( steps ~ interval + daytype, data = data2, FUN = "sum" )
@@ -91,8 +59,5 @@ steps_weend$steps[idx] <- steps_weend$steps[idx] / n_weekends
 
 library(ggplot2)
 g <- qplot(x = interval, y = steps, data = steps_weend, facets = daytype ~ .)
-g + theme(axis.text = element_text(size = 14), 
-          axis.title = element_text(size = 18), 
+g + theme(axis.text = element_text(size = 14), axis.title = element_text(size = 18), 
           strip.text = element_text(size = 18)) + geom_line() 
-```
-
